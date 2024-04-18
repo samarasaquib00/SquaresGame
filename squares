@@ -1,0 +1,196 @@
+import pygame
+import random
+import pygame.mixer
+
+# Initialize Pygame
+pygame.init()
+
+# Load the audio file
+pygame.mixer.music.load('squaresmusic.mp3')
+
+# Play the background music
+pygame.mixer.music.play(-1)  # Use -1 to loop indefinitely
+
+# Set up the screen
+WIDTH, HEIGHT = 800, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Squares Game")
+
+# Define colors
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+
+# Define player variables
+player_radius = 20
+player_x = WIDTH // 2
+player_y = HEIGHT // 2
+
+# Define square variables
+square_width = 30
+square_speed = 3
+spawn_rate = 7
+squares = []
+
+# Define font for displaying score
+font = pygame.font.Font(None, 36)
+score = 0
+
+# Set up clock
+clock = pygame.time.Clock()
+
+# Play button variables
+play_button_radius = 40
+play_button_x = WIDTH // 2
+play_button_y = HEIGHT // 2
+
+# Play button text
+play_button_font = pygame.font.Font(None, 24)
+play_button_text = play_button_font.render("PLAY", True, BLACK)
+
+# Boolean variable to track if the game has started
+game_started = False
+
+# Boolean variable to track if the game has ended
+game_over = False
+
+# Function to draw the play button
+def draw_play_button():
+    # Draw black border
+    pygame.draw.circle(screen, BLACK, (play_button_x, play_button_y), play_button_radius + 2)
+    # Draw white circle
+    pygame.draw.circle(screen, WHITE, (play_button_x, play_button_y), play_button_radius)
+    # Draw play button text
+    screen.blit(play_button_text, (play_button_x - 20, play_button_y - 8))
+
+# Function to handle click event on the play button
+def handle_play_button_click():
+    global game_started
+    mouse_x, mouse_y = pygame.mouse.get_pos()
+    if (mouse_x - play_button_x)**2 + (mouse_y - play_button_y)**2 <= play_button_radius**2:
+        game_started = True
+
+
+
+# Play again button variables
+play_again_button_width = 120
+play_again_button_height = 40
+play_again_button_x = WIDTH // 2 - play_again_button_width // 2
+play_again_button_y = HEIGHT // 2 + 80
+play_again_button_text = play_button_font.render("PLAY AGAIN", True, BLACK)
+
+# Function to draw the play again button
+def draw_play_again_button():
+    # Draw black border
+    pygame.draw.rect(screen, BLACK, (play_again_button_x - 2, play_again_button_y - 2, play_again_button_width + 4, play_again_button_height + 4))
+    # Draw white button
+    pygame.draw.rect(screen, WHITE, (play_again_button_x, play_again_button_y, play_again_button_width, play_again_button_height))
+    # Draw play again button text
+    screen.blit(play_again_button_text, (play_again_button_x + 10, play_again_button_y + 10))
+
+# Function to handle click event on the play again button
+def handle_play_again_button_click():
+    global game_started, game_over, score, squares
+    mouse_x, mouse_y = pygame.mouse.get_pos()
+    if play_again_button_x <= mouse_x <= play_again_button_x + play_again_button_width and \
+       play_again_button_y <= mouse_y <= play_again_button_y + play_again_button_height:
+        game_started = False
+        game_over = False
+        score = 0
+
+# Main game loop
+running = True
+while running:
+    screen.fill((255, 255, 255))
+
+    # Handle events
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.MOUSEBUTTONDOWN and not game_started:
+            handle_play_button_click()
+        # Inside the event handling loop
+        elif event.type == pygame.MOUSEBUTTONDOWN and game_over:
+            # Reinitialize variables
+            spawn_rate = 7
+            player_radius = 20
+            square_speed = 3
+            squares = []
+            handle_play_again_button_click()
+
+    # Draw play button if the game hasn't started
+    if not game_started:
+        draw_play_button()
+
+    # If the game has started...
+    if game_started and not game_over:
+        # Get mouse position
+        player_x, player_y = pygame.mouse.get_pos()
+
+        # Spawn squares...
+        if random.randint(0, 100) < spawn_rate:
+            square_y = random.randint(0, HEIGHT - square_width)
+            if random.randint(0, 1) == 0:
+                squares.append([WIDTH, square_y, BLACK])
+            else:
+                squares.append([WIDTH, square_y, RED])
+
+        # Move squares and check for collisions with player
+        for square in squares[:]:
+            square[0] -= square_speed
+            pygame.draw.rect(screen, square[2], pygame.Rect(square[0], square[1], square_width, square_width))
+            if pygame.Rect(square[0], square[1], square_width, square_width).colliderect(
+                    pygame.Rect(player_x - player_radius, player_y - player_radius, player_radius * 2, player_radius * 2)):
+                if square[2] == BLACK:
+                    score += 1
+
+                    # Adjust Circle Size
+                    if score % 10 == 0 and score != 0 and not adjusted_circle:
+                        player_radius += 3
+                        adjusted_circle = True
+                    elif score % 10 != 0:
+                        adjusted_circle = False
+                else:
+                    game_over = True
+                    # running = False       # Don't exit game when user loses
+                squares.remove(square)
+
+        # Adjust Speed
+        if score % 20 == 0 and score != 0 and not adjusted_speed:
+            square_speed += 1
+            adjusted_speed = True
+            print("speed: ",  square_speed)
+        elif score % 20 != 0:
+            adjusted_speed = False
+
+
+        # Adjust number of squares spawned
+        if score % 14 == 0 and score != 0 and not adjusted_spawn_rate:
+            spawn_rate += 1
+            adjusted_spawn_rate = True
+            print("spawn rate: ",  spawn_rate)
+        elif score % 14 != 0:
+            adjusted_spawn_rate = False
+
+
+        # Display score
+        score_text = font.render(f"Score: {score}", True, BLACK)
+        screen.blit(score_text, (10, 10))
+
+        # Draw player
+        pygame.draw.circle(screen, BLACK, (player_x, player_y), player_radius)
+
+    # If the game has ended...
+    if game_over:
+        draw_play_again_button()
+        # Display "GAME OVER" message
+        game_over_text = font.render("GAME OVER", True, RED)
+        screen.blit(game_over_text, (WIDTH // 2 - 100, HEIGHT // 2 - 20))
+        # Display final score
+        final_score_text = font.render(f"Final Score: {score}", True, BLACK)
+        screen.blit(final_score_text, (WIDTH // 2 - 120, HEIGHT // 2 + 20))
+
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
